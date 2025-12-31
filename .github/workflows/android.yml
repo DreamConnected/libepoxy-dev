@@ -1,0 +1,58 @@
+name: Test Android Build
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build test
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r28c
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y -qq build-essential pipx python3-venv pkg-config cmake docbook2x \
+        python3-pip pipx
+        pipx ensurepath
+        pipx install meson==0.61
+        pipx install ninja
+        
+    - name: Test build
+      run: |
+        sed -i "s|android-ndk-r28c|$ANDROID_NDK_HOME|g" aarch64-android-api30.txt
+
+        meson setup build \
+            -Dglx=no \
+            -Degl=yes \
+            --prefix=/data/share \
+            --cross-file aarch64-android-api30.txt
+
+        meson compile -C build
+        sudo /usr/local/bin/ninja -C build install
+        echo "RELEASE_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+    - name: Upload artifacts libepoxy
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: android-aarch64-libepoxy-dev
+        path: /data/share/*
+
+    - name: Create a ZIP file for artifact
+      run: zip -r android-aarch64-libepoxy-dev.zip /data/share/*
+    
+    - name: Create Release and Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ env.RELEASE_DATE }}
+        name: Release ${{ env.RELEASE_DATE }}
+        body: TODO New Release.
+        draft: false
+        prerelease: false
+        files: |
+            android-aarch64-libepoxy-dev.zip

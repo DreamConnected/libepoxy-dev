@@ -1,0 +1,23 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # At 00:00 on the last day of every month
+  workflow_dispatch: # on button click
+
+jobs:
+  sync:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: tgymnich/fork-sync@v2.0.10
+        with:
+          owner: DreamConnected
+          base: master
+          head: master
+          pr_title: "Merge upstream branch 'master'"
+          pr_message: "Merge branch 'anholt:master' into master"
+          auto_merge: true
+          merge_method: rebase
+          ignore_fail: true
